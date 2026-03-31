@@ -1,0 +1,67 @@
+package com.ui_utils.mixin;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import com.ui_utils.MainClient;
+import com.ui_utils.SharedVariables;
+
+import java.util.regex.Pattern;
+
+@Mixin(BookEditScreen.class)
+public class BookEditScreenMixin extends Screen {
+    protected BookEditScreenMixin(Component title) {
+        super(title);
+    }
+    @Unique
+    private static final Minecraft mc = Minecraft.getInstance();
+
+    @Inject(at = @At("TAIL"), method = "init")
+    public void init(CallbackInfo ci) {
+        if (SharedVariables.enabled) {
+            MainClient.createWidgets(mc, this);
+
+            // create chat box
+            EditBox addressField = new EditBox(font, 5, 245, 160, 20, Component.literal("Chat ...")) {
+                @Override
+                public boolean keyPressed(KeyEvent event) {
+                    if (event.key() == GLFW.GLFW_KEY_ENTER) {
+                        if (this.getValue().equals("^toggleuiutils")) {
+                            SharedVariables.enabled = !SharedVariables.enabled;
+                            if (mc.player != null) {
+                                mc.player.sendSystemMessage(Component.literal("UI-Utils is now " + (SharedVariables.enabled ? "enabled" : "disabled") + "."));
+                            }
+                            return false;
+                        }
+
+                        if (mc.getConnection() != null) {
+                            if (this.getValue().startsWith("/")) {
+                                mc.getConnection().sendCommand(this.getValue().replaceFirst(Pattern.quote("/"), ""));
+                            } else {
+                                mc.getConnection().sendChat(this.getValue());
+                            }
+                        } else {
+                            MainClient.LOGGER.warn("Minecraft network handler (mc.getConnection()) was null while trying to send chat message from UI Utils.");
+                        }
+
+                        this.setValue("");
+                    }
+                    return super.keyPressed(event);
+                }
+            };
+            addressField.setValue("");
+            addressField.setMaxLength(255);
+
+            this.addRenderableWidget(addressField);
+        }
+    }
+}

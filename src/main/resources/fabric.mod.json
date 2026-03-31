@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "ui-utils",
+  "version": "${version}",
+
+  "name": "UI Utils",
+  "description": "Plugin debugging mod.",
+  "authors": [
+    "Coderx_Gamer",
+    "MrBreakNFix"
+  ],
+  "contact": {
+    "homepage": "https://ui-utils.com",
+    "sources": "https://github.com/meloncatting/ui-utils"
+  },
+
+  "license": [
+    "CC BY-NC-SA 4.0",
+    "The mod may not be uploaded to any mod hosting websites or other platforms, including but not limited to 9minecraft.net, without explicit written permission from MrBreakNFix and Coderx_Gamer. All rights reserved."
+  ],
+  "icon": "assets/ui_utils/icon.png",
+
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.ui_utils.MainClient"
+    ]
+  },
+  "mixins": [
+    "ui_utils.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.18.5",
+    "fabric": "*",
+    "minecraft": ["~26.1"],
+    "java": ">=25"
+  },
+
+  "accessWidener": "ui_utils.accesswidener",
+
+  "suggests": {
+    "another-mod": "*"
+  },
+
+  "breaks": {
+    "modernfix": "*",
+    "wurst": "*",
+    "essential": "*"
+  },
+
+  "custom": {
+    "modmenu:clientsideOnly": true,
+    "modmenu:api": false
+  }
+}
