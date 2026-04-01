@@ -15,6 +15,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import com.ui_utils.gui.UIUtilsButton;
+import com.ui_utils.gui.UIUtilsSettingsScreen;
 import net.minecraft.network.HashedStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -46,6 +48,7 @@ public class MainClient implements ClientModInitializer {
     public static Minecraft mc = Minecraft.getInstance();
     @Override
     public void onInitializeClient() {
+        UIUtilsConfig.load();
         UpdateUtils.checkForUpdates();
 
         // register "restore screen" key
@@ -74,39 +77,31 @@ public class MainClient implements ClientModInitializer {
     public static void createText(Minecraft mc, GuiGraphicsExtractor context, net.minecraft.client.gui.Font font) {
         // display the current gui's sync id, revision
         context.text(font, "Sync Id: " + mc.player.containerMenu.containerId, 200, 5, Color.WHITE.getRGB());
-        context.text(font, "Revision: " + mc.player.containerMenu.getStateId(), 200, 35, Color.WHITE.getRGB());
+        context.text(font, "Revision: " + mc.player.containerMenu.getStateId(), 200, 16, Color.WHITE.getRGB());
     }
 
-    // bro are you ever going to clean this up?
-    // this code is very messy, ill clean it up if you dont
-    // -- MrBreakNFix
     public static void createWidgets(Minecraft mc, Screen screen) {
-        // register "close without packet" button in all AbstractContainerScreens
-        screen.addRenderableWidget(Button.builder(Component.literal("Close without packet"), (button) -> {
-            // closes the current gui without sending a packet to the current server
-            mc.setScreen(null);
-        }).width(115).pos(5, 5).build());
+        // Button layout: width=160, height=20, spacing=22px (2px gap), starting at y=15
+        final int BW = 160, BX = 5, BY = 15, SP = 22;
 
-        // register "de-sync" button in all AbstractContainerScreens
-        screen.addRenderableWidget(Button.builder(Component.literal("De-sync"), (button) -> {
-            // keeps the current gui open client-side and closed server-side
+        screen.addRenderableWidget(UIUtilsButton.of(BX, BY, BW, 20, Component.literal("Close without packet"), (button) -> {
+            mc.setScreen(null);
+        }));
+
+        screen.addRenderableWidget(UIUtilsButton.of(BX, BY + SP, BW, 20, Component.literal("De-sync"), (button) -> {
             if (mc.getConnection() != null && mc.player != null) {
                 mc.getConnection().send(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
             } else {
                 LOGGER.warn("Minecraft network handler or player was null while using 'De-sync' in UI Utils.");
             }
-        }).width(115).pos(5, 35).build());
+        }));
 
-        // register "send packets" button in all AbstractContainerScreens
-        screen.addRenderableWidget(Button.builder(Component.literal("Send packets: " + SharedVariables.sendUIPackets), (button) -> {
-            // tells the client if it should send any gui related packets
+        screen.addRenderableWidget(UIUtilsButton.of(BX, BY + SP * 2, BW, 20, Component.literal("Send packets: " + SharedVariables.sendUIPackets), (button) -> {
             SharedVariables.sendUIPackets = !SharedVariables.sendUIPackets;
             button.setMessage(Component.literal("Send packets: " + SharedVariables.sendUIPackets));
-        }).width(115).pos(5, 65).build());
+        }));
 
-        // register "delay packets" button in all AbstractContainerScreens
-        screen.addRenderableWidget(Button.builder(Component.literal("Delay packets: " + SharedVariables.delayUIPackets), (button) -> {
-            // toggles a setting to delay all gui related packets to be used later when turning this setting off
+        screen.addRenderableWidget(UIUtilsButton.of(BX, BY + SP * 3, BW, 20, Component.literal("Delay packets: " + SharedVariables.delayUIPackets), (button) -> {
             SharedVariables.delayUIPackets = !SharedVariables.delayUIPackets;
             button.setMessage(Component.literal("Delay packets: " + SharedVariables.delayUIPackets));
             if (!SharedVariables.delayUIPackets && !SharedVariables.delayedUIPackets.isEmpty() && mc.getConnection() != null) {
@@ -118,20 +113,16 @@ public class MainClient implements ClientModInitializer {
                 }
                 SharedVariables.delayedUIPackets.clear();
             }
-        }).width(115).pos(5, 95).build());
+        }));
 
-        // register "save gui" button in all AbstractContainerScreens
-        screen.addRenderableWidget(Button.builder(Component.literal("Save GUI"), (button) -> {
-            // saves the current gui to a variable to be accessed later
+        screen.addRenderableWidget(UIUtilsButton.of(BX, BY + SP * 4, BW, 20, Component.literal("Save GUI"), (button) -> {
             if (mc.player != null) {
                 SharedVariables.storedScreen = mc.screen;
                 SharedVariables.storedScreenHandler = mc.player.containerMenu;
             }
-        }).width(115).pos(5, 125).build());
+        }));
 
-        // register "disconnect and send packets" button in all AbstractContainerScreens
-        screen.addRenderableWidget(Button.builder(Component.literal("Disconnect and send packets"), (button) -> {
-            // sends all "delayed" gui related packets before disconnecting, use: potential race conditions on non-vanilla servers
+        screen.addRenderableWidget(UIUtilsButton.of(BX, BY + SP * 5, BW, 20, Component.literal("Disconnect and send packets"), (button) -> {
             SharedVariables.delayUIPackets = false;
             if (mc.getConnection() != null) {
                 for (Packet<?> packet : SharedVariables.delayedUIPackets) {
@@ -142,10 +133,9 @@ public class MainClient implements ClientModInitializer {
                 LOGGER.warn("Minecraft network handler (mc.getConnection()) is null while client is disconnecting.");
             }
             SharedVariables.delayedUIPackets.clear();
-        }).width(160).pos(5, 155).build());
+        }));
 
-        // register "fabricate packet" button in all AbstractContainerScreens
-        Button fabricatePacketButton = Button.builder(Component.literal("Fabricate packet"), (button) -> {
+        UIUtilsButton fabricatePacketButton = UIUtilsButton.of(BX, BY + SP * 6, BW, 20, Component.literal("Fabricate packet"), (button) -> {
             // creates a gui allowing you to fabricate packets
 
             JFrame frame = new JFrame("Choose Packet");
@@ -440,22 +430,25 @@ public class MainClient implements ClientModInitializer {
             frame.add(clickSlotButton);
             frame.add(buttonClickButton);
             frame.setVisible(true);
-        }).width(115).pos(5, 185).build();
+        });
         fabricatePacketButton.active = !System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac");
         screen.addRenderableWidget(fabricatePacketButton);
 
-        screen.addRenderableWidget(Button.builder(Component.literal("Copy GUI Title JSON"), (button) -> {
+        screen.addRenderableWidget(UIUtilsButton.of(5, 15 + 22 * 7, 160, 20, Component.literal("Copy GUI Title JSON"), (button) -> {
             try {
                 if (mc.screen == null) {
                     throw new IllegalStateException("The current minecraft screen (mc.screen) is null");
                 }
-                // fixes #137
-                // From fabric wiki https://docs.fabricmc.net/develop/text-and-translations#serializing-text
                 mc.keyboardHandler.setClipboard(new Gson().toJson(ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, mc.screen.getTitle()).getOrThrow()));
             } catch (IllegalStateException e) {
                 LOGGER.error("Error while copying title JSON to clipboard", e);
             }
-        }).width(115).pos(5, 215).build());
+        }));
+
+        // Settings button — opens UIUtilsSettingsScreen
+        screen.addRenderableWidget(UIUtilsButton.of(5, 15 + 22 * 8, 160, 20, Component.literal("Settings"), (button) -> {
+            mc.setScreen(new UIUtilsSettingsScreen(mc.screen));
+        }));
     }
 
     @NotNull

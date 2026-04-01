@@ -19,6 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.ui_utils.MainClient;
 import com.ui_utils.SharedVariables;
+import com.ui_utils.gui.UIUtilsEditBox;
 import com.ui_utils.mixin.accessor.ScreenAccessor;
 
 import java.util.regex.Pattern;
@@ -50,7 +51,8 @@ public abstract class ScreenMixin {
                 MainClient.createWidgets(mc, screen);
 
                 // create chat box
-                this.addressField = new EditBox(font, 5, 245, 160, 20, Component.literal("Chat ...")) {
+                // chat field sits 4px below the Settings button (15 + 22*9 = 213, +2 gap = 215)
+                this.addressField = new UIUtilsEditBox(font, 5, 215, 160, 20, Component.literal("Chat ...")) {
                     @Override
                     public boolean keyPressed(KeyEvent event) {
                         if (event.key() == GLFW.GLFW_KEY_ENTER) {
@@ -88,9 +90,11 @@ public abstract class ScreenMixin {
 
     @Inject(at = @At("TAIL"), method = "extractRenderState")
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        // display sync id, revision, if ui utils is enabled
         if (SharedVariables.enabled && mc.player != null && mc.screen instanceof LecternScreen) {
-            MainClient.createText(mc, context, ((ScreenAccessor) this).getFont());
+            net.minecraft.client.gui.Font font = ((ScreenAccessor) this).getFont();
+            // header label above the button panel
+            context.text(font, "UI Utils", 5, 3, 0xFFFFAA00);
+            MainClient.createText(mc, context, font);
         }
     }
 }
